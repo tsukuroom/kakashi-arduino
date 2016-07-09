@@ -1,3 +1,4 @@
+#include <Servo.h>
 #include <Adafruit_NeoPixel.h>
 #include <NewPing.h>
 
@@ -7,7 +8,9 @@
 
 #define LED_PIN   6
 #define NUM_LEDS  8
-#define LED_BRIGHTNESS  25
+#define LED_BRIGHTNESS  10
+
+#define SERVO_PIN 10
 
 #define DEBUG 1
 #ifdef DEBUG
@@ -20,6 +23,7 @@
 
 NewPing sonar(PING_TRIGGER_PIN, PING_ECHO_PIN, PING_MAX_DISTANCE);
 Adafruit_NeoPixel stick(NUM_LEDS, LED_PIN, NEO_GRB + NEO_KHZ800);
+Servo hand;
 
 int pingThreshold = 0; //cm
 boolean monitoring = false;
@@ -48,6 +52,9 @@ void setup() {
   stick.setBrightness(LED_BRIGHTNESS);
   stick.begin();
   stick.show();
+
+  hand.attach(SERVO_PIN); 
+  hand.write(0);
 }
 
 void loop() {
@@ -68,7 +75,9 @@ void loop() {
       monitoring = false;
     } else if (command.equals("cracker")) {
       DEBUG_PRINTLN("pull cracker");
-      rainbowFade(1, 3);
+      hand.write(180);
+      rainbowFade(1, 5);
+      hand.write(0);
     } else {
       DEBUG_PRINTLN("Unknown command");
     }
@@ -182,4 +191,3 @@ uint8_t green(uint32_t c) {
 uint8_t blue(uint32_t c) {
   return (c);
 }
-
