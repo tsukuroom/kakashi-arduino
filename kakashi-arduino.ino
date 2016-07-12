@@ -11,6 +11,7 @@
 #define LED_BRIGHTNESS  10
 
 #define SERVO_PIN 10
+#define SERVO_DELAY 300
 
 #define DEBUG 1
 #ifdef DEBUG
@@ -53,8 +54,7 @@ void setup() {
   stick.begin();
   stick.show();
 
-  hand.attach(SERVO_PIN); 
-  hand.write(0);
+  moveHand(SERVO_PIN, 0);
 }
 
 void loop() {
@@ -75,9 +75,9 @@ void loop() {
       monitoring = false;
     } else if (command.equals("cracker")) {
       DEBUG_PRINTLN("pull cracker");
-      hand.write(180);
+      moveHand(SERVO_PIN, 180);
       rainbowFade(1, 5);
-      hand.write(0);
+      moveHand(SERVO_PIN, 0);
     } else {
       DEBUG_PRINTLN("Unknown command");
     }
@@ -190,4 +190,11 @@ uint8_t green(uint32_t c) {
 }
 uint8_t blue(uint32_t c) {
   return (c);
+}
+
+void moveHand(int pin, int value) {
+  hand.attach(pin);
+  hand.write(value);
+  delay(SERVO_DELAY);
+  hand.detach();
 }
