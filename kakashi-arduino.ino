@@ -59,7 +59,16 @@ void setup() {
 
 void loop() {
   if (Serial.available() > 0) {
-    String command = Serial.readString();
+    String command;
+    while (1) {
+      if(Serial.available()) {
+        char temp = char(Serial.read());
+        command += temp;
+        if (temp == '\n') {
+          break;
+        }
+      }
+    }
     command.trim();
     
     if (command.startsWith("start")) {
