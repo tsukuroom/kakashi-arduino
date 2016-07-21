@@ -13,7 +13,7 @@
 #define SERVO_PIN 10
 #define SERVO_DELAY 300
 
-#define DEBUG 1
+//#define DEBUG 1
 #ifdef DEBUG
 #define DEBUG_PRINT(val) Serial.print(val)
 #define DEBUG_PRINTLN(val) Serial.println(val)
@@ -119,7 +119,6 @@ uint8_t calcWait(unsigned long cm) {
 }
 
 void pulseWhite(uint8_t wait, int speed) {
-  Serial.println(wait);
   for(int j = speed - 1; j < 256 ; j = j + speed){
     for(uint16_t i=0; i<stick.numPixels(); i++) {
       stick.setPixelColor(i, stick.Color(gamma[j],gamma[j],gamma[j] ) );
