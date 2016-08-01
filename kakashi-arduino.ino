@@ -8,7 +8,7 @@
 
 #define LED_PIN   6
 #define NUM_LEDS  8
-#define LED_BRIGHTNESS  10
+#define LED_BRIGHTNESS  255
 
 #define SERVO_PIN 10
 #define SERVO_DELAY 300
@@ -25,7 +25,7 @@
 enum State {
   IDLE,
   MONITOR, // Monitoring distance
-  RAINBOW  // Rainbow LED
+  RECOGNIZE  // Bird recognize
 };
 
 NewPing sonar(PING_TRIGGER_PIN, PING_ECHO_PIN, PING_MAX_DISTANCE);
@@ -91,15 +91,18 @@ void loop() {
     } else if (command.equals("stop")) {
       DEBUG_PRINTLN("enter idle state");
       state = IDLE;
-    } else if (command.equals("rainbow")) {
-      DEBUG_PRINTLN("enter rainbow state");
-      state = RAINBOW;
+    } else if (command.equals("recognize")) {
+      DEBUG_PRINTLN("enter recognize state");
+      pulseGreen(5, 2, 2);
+      state = RECOGNIZE;
     } else if (command.equals("cracker")) {
       cracker();
+      state = MONITOR;
     } else if (command.equals("green")) {
-      pulseGreen(1, 2, 2);
+      pulseGreen(5, 2, 2);
     } else if (command.equals("blue")) {
       fadeBlue();
+      state = MONITOR;
     } else {
       DEBUG_PRINTLN("Unknown command");
     }
@@ -107,7 +110,7 @@ void loop() {
 
   if (state == MONITOR) {
     monitor();
-  } else if (state == RAINBOW) {
+  } else if (state == RECOGNIZE) {
     rainbow();
   } else {
     delay(10);
