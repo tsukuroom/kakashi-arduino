@@ -22,14 +22,20 @@
 #define DEBUG_PRINTLN(val)
 #endif
 
+enum State {
+  IDLE,
+  MONITOR, // Monitoring distance
+  RAINBOW  // Rainbow LED
+};
+
 NewPing sonar(PING_TRIGGER_PIN, PING_ECHO_PIN, PING_MAX_DISTANCE);
 Adafruit_NeoPixel stick(NUM_LEDS, LED_PIN, NEO_GRB + NEO_KHZ800);
 Servo hand;
 
-int pingThreshold = 0; //cm
-boolean monitoring = false;
+int pingThreshold = 50; //cm
+State state = IDLE;
 
-int gamma[] = {
+uint8_t gamma[] = {
     0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
     0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  1,  1,  1,  1,
     1,  1,  1,  1,  1,  1,  1,  1,  1,  2,  2,  2,  2,  2,  2,  2,
@@ -55,6 +61,8 @@ void setup() {
   stick.show();
 
   moveHand(SERVO_PIN, 0);
+
+  state = IDLE;
 }
 
 void loop() {
@@ -71,43 +79,75 @@ void loop() {
     }
     command.trim();
     
-    if (command.startsWith("start")) {
-      DEBUG_PRINTLN("monitoring start");
-      pingThreshold = command.substring(6).toInt();
-      if (pingThreshold == 0) {
+    if (command.startsWith("monitor")) {
+      int param = command.substring(8).toInt();
+      if (param == 0) {
         DEBUG_PRINTLN("Invalid threshold");
       } else {
-        monitoring = true;
+        DEBUG_PRINTLN("enter monitor state");
+        pingThreshold = param;
+        state = MONITOR;
       }
     } else if (command.equals("stop")) {
-      DEBUG_PRINTLN("monitoring stop");
-      monitoring = false;
+      DEBUG_PRINTLN("enter idle state");
+      state = IDLE;
+    } else if (command.equals("rainbow")) {
+      DEBUG_PRINTLN("enter rainbow state");
+      state = RAINBOW;
     } else if (command.equals("cracker")) {
-      DEBUG_PRINTLN("pull cracker");
-      moveHand(SERVO_PIN, 180);
-      rainbowFade(1, 5);
-      moveHand(SERVO_PIN, 0);
+      cracker();
+    } else if (command.equals("green")) {
+      pulseGreen(1, 2, 2);
+    } else if (command.equals("blue")) {
+      fadeBlue();
     } else {
       DEBUG_PRINTLN("Unknown command");
     }
   }
 
-  if (monitoring) {
-    unsigned long cm = sonar.ping_cm();
-    DEBUG_PRINT("Ping: ");
-    DEBUG_PRINT(cm);
-    DEBUG_PRINTLN("cm");
-
-    if (cm <= 0) {
-      cm = PING_MAX_DISTANCE;
-    }
-    if (cm > 0 && cm < pingThreshold) {
-      Serial.println("chikai");
-    }
-
-    uint8_t wait = calcWait(cm);
-    pulseWhite(wait, 2);
+  if (state == MONITOR) {
+    monitor();
+  } else if (state == RAINBOW) {
+    rainbow();
+  } else {
+    delay(10);
   }
+}
+
+void cracker() {
+  DEBUG_PRINTLN("cracker");
+  fadeIn(2, 2, true, false, false);
+  moveHand(SERVO_PIN, 180);
+  delay(2000);
+  moveHand(SERVO_PIN, 0);
+  fadeOut(2, 2, true, false, false);
+}
+
+void fadeBlue() {
+  fadeIn(2, 2, false, false, true);
+  delay(2000);
+  fadeOut(2, 2, false, false, true);  
+}
+
+void monitor() {
+  unsigned long cm = sonar.ping_cm();
+  DEBUG_PRINT("Ping: ");
+  DEBUG_PRINT(cm);
+  DEBUG_PRINTLN("cm");
+
+  if (cm <= 0) {
+    cm = PING_MAX_DISTANCE;
+  }
+  if (cm > 0 && cm < pingThreshold) {
+    Serial.println("chikai");
+  }
+
+  uint8_t wait = calcWait(cm);
+  pulseWhite(wait, 2);  
+}
+
+void rainbow() {
+  rainbowFade(5, 1);
 }
 
 uint8_t calcWait(unsigned long cm) {
@@ -118,27 +158,58 @@ uint8_t calcWait(unsigned long cm) {
   }
 }
 
+void pulseBlue(uint8_t wait, int speed, uint8_t times) {
+  for (uint8_t i = 0; i < times; i++) {
+    pulse(wait, speed, false, false, true);
+  }
+}
+
+void pulseGreen(uint8_t wait, int speed, uint8_t times) {
+  for (uint8_t i = 0; i < times; i++) {
+    pulse(wait, speed, false, true, false);
+  }  
+}
+
 void pulseWhite(uint8_t wait, int speed) {
+  pulse(wait, speed, true, true, true);
+}
+
+void pulse(uint8_t wait, int speed, boolean rValid, boolean gValid, boolean bValid) {
+  fadeIn(wait, speed, rValid, gValid, bValid);
+  fadeOut(wait, speed, rValid, gValid, bValid);
+}
+
+void fadeIn(uint8_t wait, int speed, boolean rValid, boolean gValid, boolean bValid) {
+  uint8_t rMask = rValid? 0xff : 0x0;
+  uint8_t gMask = gValid? 0xff : 0x0;
+  uint8_t bMask = bValid? 0xff : 0x0;
+  
   for(int j = speed - 1; j < 256 ; j = j + speed){
     for(uint16_t i=0; i<stick.numPixels(); i++) {
-      stick.setPixelColor(i, stick.Color(gamma[j],gamma[j],gamma[j] ) );
+      stick.setPixelColor(i, stick.Color(gamma[j] & rMask, gamma[j] & gMask, gamma[j] & bMask));
     }
     delay(wait);
     stick.show();
-  }
+  }  
+}
 
+void fadeOut(uint8_t wait, int speed, boolean rValid, boolean gValid, boolean bValid) {
+  uint8_t rMask = rValid? 0xff : 0x0;
+  uint8_t gMask = gValid? 0xff : 0x0;
+  uint8_t bMask = bValid? 0xff : 0x0;
+  
   for(int j = 255; j >= 0 ; j = j - speed){
     for(uint16_t i=0; i<stick.numPixels(); i++) {
-      stick.setPixelColor(i, stick.Color(gamma[j],gamma[j],gamma[j] ) );
+      stick.setPixelColor(i, stick.Color(gamma[j] & rMask, gamma[j] & gMask, gamma[j] & bMask));
     }
     delay(wait);
     stick.show();
-  }
+  }  
 }
 
 void rainbowFade(uint8_t wait, int rainbowLoops) {
   float fadeMax = 100.0;
-  int fadeVal = 0;
+  int fadeVal = 100;
   uint32_t wheelVal;
   int redVal, greenVal, blueVal;
 
@@ -158,21 +229,14 @@ void rainbowFade(uint8_t wait, int rainbowLoops) {
 
       }
 
-      //First loop, fade in!
-      if(k == 0 && fadeVal < fadeMax-1) {
-          fadeVal++;
-      }
-
-      //Last loop, fade out!
-      else if(k == rainbowLoops - 1 && j > 255 - fadeMax ){
-          fadeVal--;
-      }
-
-        stick.show();
-        delay(wait);
+      stick.show();
+      delay(wait);
     }
   
   }
+
+  stick.clear();
+  stick.show();
 }
 
 // Input a value 0 to 255 to get a color value.
