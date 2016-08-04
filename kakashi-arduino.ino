@@ -119,11 +119,12 @@ void loop() {
 
 void cracker() {
   DEBUG_PRINTLN("cracker");
-  fadeIn(2, 2, true, false, false);
   moveHand(SERVO_PIN, 180);
+  pulseRed(1, 4, 10);
+  fadeIn(1, 8, true, false, false);
   delay(2000);
   moveHand(SERVO_PIN, 0);
-  fadeOut(2, 2, true, false, false);
+  fadeOut(5, 2, true, false, false);
 }
 
 void fadeBlue() {
@@ -171,6 +172,12 @@ void pulseGreen(uint8_t wait, int speed, uint8_t times) {
   for (uint8_t i = 0; i < times; i++) {
     pulse(wait, speed, false, true, false);
   }  
+}
+
+void pulseRed(uint8_t wait, int speed, uint8_t times) {
+  for (uint8_t i = 0; i < times; i++) {
+    pulse(wait, speed, true, false, false);
+  }    
 }
 
 void pulseWhite(uint8_t wait, int speed) {
@@ -273,3 +280,4 @@ void moveHand(int pin, int value) {
   delay(SERVO_DELAY);
   hand.detach();
 }
+
